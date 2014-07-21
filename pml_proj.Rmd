@@ -1,0 +1,89 @@
+---
+title: "pml_proj"
+author: "Becky"
+date: "Sunday, July 20, 2014"
+output: html_document
+---
+#Synopsis
+This study use the data from [http://groupware.les.inf.puc-rio.br/har] which collected Human Activity by machine and then aim to predict the activity into 5 classes (sitting-down, standing-up, standing, walking, and sitting).
+
+In this paper, we will use the data mentioned above to develop a predictive model for this classes.
+
+
+#Loading the dataset
+```{r}
+if(!file.exists("train.csv")){
+  download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv","train.csv")
+  }
+train= read.csv("train.csv", na.strings=c("NA", "","#DIV/0!"))
+```
+
+#Processing the data
+```{r}
+dim(train)
+summary(train$classe)
+```
+There are `r dim(train)[1]` observations with `r dim(train)[2]` variables. 
+
+#Spliting the training and testing data
+```{r}
+library(caret)
+set.seed(1234)
+inTrain=createDataPartition(y=train$classe, p=0.7, list=FALSE)
+t1=train[inTrain,]
+t2=train[-inTrain,]
+
+dim(t1)
+```
+
+#Selecting variables
+```{r}
+na_check= sapply(t1, function(x) {sum(is.na(x))})
+table(na_check)
+```
+Only `r table(na_check)[1]` columns which contains less proportion of missing values, that can be used for further analysis.
+
+```{r}
+t11 = t1[, !names(t1) %in% names(na_check[na_check!=0])]
+str(t11)
+```
+By looking at the summary of the data, we can see that the first 7 columns are recording the specification of records which useless to our model. We also take out these variables from the analysis.
+
+```{r}
+t11 = t11[,-c(1:7)]
+
+```
+
+#Building the model
+We now use random forest method to create the prediction model. 
+
+```{r, cache=TRUE}
+ctrl <- trainControl(method = "repeatedcv", 
+                     repeats = 5)
+ 
+fit = train(classe~., data=t11, method="rf", preProcess=c("center","scale"),trControl=ctrl)
+```
+
+#Evaluating the model
+After used the training dataset to develop the model, we use the testing dataset to evaluate the out-sample error rate.
+
+```{r}
+cf=confusionMatrix(t2$classe, predict(fit, t2))
+```
+The out-sample error rate is `r cf$overall[1]`.
+
+#Reference: 
+Data source [http://groupware.les.inf.puc-rio.br/har]
+
+```{r include=FALSE}
+submit=read.csv("test.csv", na.strings=c("NA", "","#DIV/0!"))
+answers=predict(fit, submit)
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(answers)
+```

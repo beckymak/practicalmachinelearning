@@ -79,6 +79,9 @@ train= read.csv(&quot;train.csv&quot;, na.strings=c(&quot;NA&quot;, &quot;&quot;
 <pre><code>##    A    B    C    D    E 
 ## 5580 3797 3422 3216 3607</code></pre>
 <p>There are 19622 observations with 160 variables.</p>
+</div>
+<div id="spliting-the-training-and-testing-data" class="section level1">
+<h1>Spliting the training and testing data</h1>
 <pre class="r"><code>library(caret)</code></pre>
 <pre><code>## Loading required package: lattice
 ## Loading required package: ggplot2</code></pre>
@@ -89,6 +92,9 @@ t2=train[-inTrain,]
 
 dim(t1)</code></pre>
 <pre><code>## [1] 13737   160</code></pre>
+</div>
+<div id="selecting-variables" class="section level1">
+<h1>Selecting variables</h1>
 <pre class="r"><code>na_check= sapply(t1, function(x) {sum(is.na(x))})
 table(na_check)</code></pre>
 <pre><code>## na_check
@@ -166,25 +172,20 @@ str(t11)</code></pre>
 <div id="building-the-model" class="section level1">
 <h1>Building the model</h1>
 <p>We now use random forest method to create the prediction model.</p>
-<pre class="r"><code>fit = train(classe~., data=t11,method=&quot;rpart&quot;)</code></pre>
-<pre><code>## Loading required package: rpart</code></pre>
+<pre class="r"><code>ctrl &lt;- trainControl(method = &quot;repeatedcv&quot;, 
+                     repeats = 5)
+ 
+fit = train(classe~., data=t11, method=&quot;rf&quot;, preProcess=c(&quot;center&quot;,&quot;scale&quot;),trControl=ctrl)</code></pre>
+<pre><code>## Loading required package: randomForest</code></pre>
+<pre><code>## Warning: package 'randomForest' was built under R version 3.1.1</code></pre>
+<pre><code>## randomForest 4.6-10
+## Type rfNews() to see new features/changes/bug fixes.</code></pre>
 </div>
 <div id="evaluating-the-model" class="section level1">
 <h1>Evaluating the model</h1>
 <p>After used the training dataset to develop the model, we use the testing dataset to evaluate the out-sample error rate.</p>
-<pre class="r"><code>class=function(fit, data){
- LETTERS[apply(predict(fit$final,data),1,which.max)]
-}
-mtIn = table(t11$classe, class(fit, t11))
-errIn=1-sum(diag(mtIn))/sum(mtIn)
-
-
-mtOut = table(t2$classe, class(fit, t2))
-errOut=1-sum(diag(mtOut))/sum(mtOut)</code></pre>
-<p>The in-sample error rate is 0.5856. And the out-sample error rate is 0.5903.</p>
-</div>
-<div id="conclusion" class="section level1">
-<h1>Conclusion</h1>
+<pre class="r"><code>cf=confusionMatrix(t2$classe, predict(fit, t2))</code></pre>
+<p>The out-sample error rate is 0.9942.</p>
 </div>
 <div id="reference" class="section level1">
 <h1>Reference:</h1>
